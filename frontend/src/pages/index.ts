@@ -1,0 +1,12 @@
+export { HomePage } from './HomePage';
+export { PropertiesPage } from './PropertiesPage';
+export { PropertyDetailsPage } from './PropertyDetailsPage';
+export { FavoritesPage } from './FavoritesPage';
+export { ComparePage } from './ComparePage';
+export { LoginPage } from './LoginPage';
+export { RegisterPage } from './RegisterPage';
+export { DashboardPage } from './DashboardPage';
+export { DashboardPropertiesPage } from './DashboardPropertiesPage';
+export { AddPropertyPage } from './AddPropertyPage';
+export { EditPropertyPage } from './EditPropertyPage';
+export { AgentsPage } from './AgentsPage';

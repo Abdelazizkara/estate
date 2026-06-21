@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  buyer
+  seller
+  agent
+  admin
+}
+
+enum PropertyType {
+  apartment
+  house
+  villa
+  land
+  commercial
+}
+
+enum PropertyStatus {
+  sale
+  rent
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  passwordHash  String
+  name          String
+  role          UserRole   @default(buyer)
+  phone         String?
+  agency        String?
+  licenseNumber String?
+  rating        Float?
+  reviews       Int?
+  createdAt     DateTime   @default(now())
+  properties    Property[] @relation("AgentProperties")
+}
+
+model Property {
+  id          String         @id @default(cuid())
+  title       String
+  description String
+  price       Float
+  type        PropertyType
+  status      PropertyStatus
+  address     String
+  city        String
+  state       String
+  zipCode     String
+  country     String
+  lat         Float
+  lng         Float
+  bedrooms    Int
+  bathrooms   Int
+  area        Float
+  yearBuilt   Int?
+  parking     Int?
+  furnished   Boolean        @default(false)
+  balcony     Boolean        @default(false)
+  garden      Boolean        @default(false)
+  pool        Boolean        @default(false)
+  images      String
+  agentId     String
+  agent       User           @relation("AgentProperties", fields: [agentId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
