@@ -92,13 +92,6 @@ export function DashboardPage() {
                     <span>Add Property</span>
                   </Link>
                 )}
-                <Link
-                  to="/dashboard/settings"
-                  className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg"
-                >
-                  <Settings className="h-5 w-5" />
-                  <span>Settings</span>
-                </Link>
               </nav>
             </div>
           </div>

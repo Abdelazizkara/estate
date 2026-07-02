@@ -435,7 +435,7 @@ export function AddPropertyPage() {
               <button
                 type="submit"
                 disabled={loading || uploading}
-                className="px-5 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
               >
                 {uploading ? 'Uploading…' : loading ? 'Creating…' : 'Create listing'}
               </button>

@@ -3,7 +3,7 @@ import { Search, Filter } from 'lucide-react';
 import { usePropertyStore } from '../../store/usePropertyStore';
 
 interface SearchFiltersProps {
-  onSearch?: () => void;
+  onSearch?: () => void; 
 }
 
 export function SearchFilters({ onSearch }: SearchFiltersProps) {
@@ -178,7 +178,7 @@ export function SearchFilters({ onSearch }: SearchFiltersProps) {
         <div className="flex items-end">
           <button
             type="submit"
-            className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center justify-center space-x-2"
+            className="w-full px-4 py-2 bg-primary-600 text-dark border border-gray-300 rounded-lg hover:bg-primary-700 transition flex items-center justify-center space-x-2"
           >
             <Filter className="h-4 w-4" />
             <span>Filter</span>
