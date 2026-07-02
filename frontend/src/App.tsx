@@ -15,7 +15,7 @@ import {
   EditPropertyPage,
   AgentsPage,
 } from "./pages";
-import Chat from "./pages/TestMessage";
+import MessagesPage from "./pages/TestMessage";
 
 function App() {
   return (
@@ -113,7 +113,7 @@ function App() {
             path="/dashboard/messages"
             element={
               <Layout>
-                <Chat />
+                <MessagesPage />
               </Layout>
             }
           />

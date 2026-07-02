@@ -1,115 +1,173 @@
 import { useEffect, useState, useRef } from "react";
+import { MessageSquare, Send } from "lucide-react";
+import { useUserStore } from "../store/useUserStore";
 import { socket } from "../services/socket";
 
-interface GlobalMessage {
+interface ConversationSummary {
   id: string;
-  username: string;
+  otherUser: { id: string; name: string; role: string } | null;
+  property: { id: string; title: string } | null;
+  lastMessage: { content: string; createdAt: string } | null;
+}
+interface Message {
+  id: string;
   content: string;
   createdAt: string;
+  sender: { id: string; name: string };
 }
 
-const randomNickname = `Guest_${Math.floor(1000 + Math.random() * 9000)}`;
-
-export default function GlobalChat({
-  loggedInUsername,
-}: {
-  loggedInUsername?: string;
-}) {
-  const [messages, setMessages] = useState<GlobalMessage[]>([]);
+export default function MessagesPage() {
+  const { user } = useUserStore();
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const myUsername = loggedInUsername || randomNickname;
+  const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
-    const handleBroadcast = (msg: GlobalMessage) => {
-      setMessages((prev) => [...prev, msg]);
-    };
-
-    socket.on("new-global-message", handleBroadcast);
-
-    return () => {
-      socket.off("new-global-message", handleBroadcast);
-    };
+    fetch("http://localhost:3001/conversations", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => setConversations(data.conversations ?? []));
   }, []);
+
+  useEffect(() => {
+    if (!activeId) return;
+    socket.emit("join-conversation", activeId);
+    fetch(`http://localhost:3001/conversations/${activeId}/messages`, {
+      credentials: "include",
+    })
+      .then((r) => r.json())
+      .then((data) => setMessages(data.messages ?? []));
+    return () => {
+      socket.emit("leave-conversation", activeId);
+    };
+  }, [activeId]);
+
+  useEffect(() => {
+    const handleNew = (msg: Message & { conversationId: string }) => {
+      if (msg.conversationId === activeId)
+        setMessages((prev) => [...prev, msg]);
+    };
+    socket.on("new-message", handleNew);
+    return () => {
+      socket.off("new-message", handleNew);
+    };
+  }, [activeId]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const send = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim()) return;
-
-    socket.emit("send-global-message", {
-      username: myUsername,
-      content: text,
-    });
-
+    if (!text.trim() || !activeId) return;
+    socket.emit("send-message", { conversationId: activeId, content: text });
     setText("");
   };
 
+  if (!user) return null;
+  const active = conversations.find((c) => c.id === activeId);
+
   return (
-    <div className="flex flex-col h-[650px] w-full max-w-lg mx-auto border border-purple-200 rounded-2xl shadow-xl bg-slate-50 overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-1"></div>
-        ) : (
-          messages.map((m) => {
-            const isMe = m.username === myUsername;
-            return (
-              <div
-                key={m.id}
-                className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
-              >
-                <span className="text-[11px] font-medium text-slate-500 mb-1 px-1">
-                  {isMe ? "You" : m.username}
-                </span>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Messages</h1>
 
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm shadow-sm transition-all ${
-                    isMe
-                      ? "bg-purple-600 text-white rounded-tr-none"
-                      : "bg-white text-slate-800 border border-slate-100 rounded-tl-none"
-                  }`}
-                >
-                  <p className="break-words leading-relaxed">{m.content}</p>
-                  <span
-                    className={`block text-[9px] mt-1 text-right ${
-                      isMe ? "text-purple-200" : "text-slate-400"
-                    }`}
-                  >
-                    {new Date(m.createdAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[600px]">
+          <div className="lg:col-span-1 bg-white rounded-xl shadow-lg overflow-y-auto">
+            {conversations.length === 0 ? (
+              <div className="p-6 text-center text-gray-500 text-sm">
+                No conversations yet
               </div>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+            ) : (
+              conversations.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setActiveId(c.id)}
+                  className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition ${activeId === c.id ? "bg-primary-50" : ""}`}
+                >
+                  <p className="font-medium text-gray-900 text-sm truncate">
+                    {c.otherUser?.name ?? "Unknown user"}
+                  </p>
+                  {c.property && (
+                    <p className="text-xs text-primary-600 truncate">
+                      {c.property.title}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 truncate">
+                    {c.lastMessage?.content ?? "No messages yet"}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
 
-      <form
-        onSubmit={send}
-        className="p-3 bg-white border-t border-slate-100 flex items-center space-x-2"
-      >
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Broadcast a message to everyone..."
-          className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all text-slate-700 placeholder:text-slate-400"
-        />
-        <button
-          type="submit"
-          className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-md shadow-purple-100 active:scale-95 transition-all"
-        >
-          Send
-        </button>
-      </form>
+          <div className="lg:col-span-3 bg-white rounded-xl shadow-lg flex flex-col">
+            {!activeId ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                <MessageSquare className="h-12 w-12 mb-2" />
+                <p>Select a conversation</p>
+              </div>
+            ) : (
+              <>
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <p className="font-semibold text-gray-900">
+                    {active?.otherUser?.name}
+                  </p>
+                  {active?.property && (
+                    <p className="text-xs text-gray-500">
+                      {active.property.title}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {messages.map((m) => {
+                    const isMe = m.sender.id === user.id;
+                    return (
+                      <div
+                        key={m.id}
+                        className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
+                      >
+                        <div
+                          className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${isMe ? "bg-black text-white rounded-tr-none" : "bg-gray-100 text-gray-800 rounded-tl-none"}`}
+                        >
+                          <p className="break-words">{m.content}</p>
+                        </div>
+                        <span className="text-[10px] text-gray-400 mt-1">
+                          {new Date(m.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <div ref={endRef} />
+                </div>
+
+                <form
+                  onSubmit={send}
+                  className="p-3 border-t border-gray-100 flex items-center gap-2"
+                >
+                  <input
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-primary-600 hover:bg-primary-700 text-white p-2.5 rounded-xl transition"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

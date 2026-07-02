@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.js";
 import propertyRoutes from "./routes/properties.js";
 import myPropertyRoutes from "./routes/myProperties.js";
 import uploadRoutes from "./routes/uploads.js";
+import conversationsRouter from "./routes/conversations.js";
 
 import { setupSocket } from "./socket.js";
 
@@ -32,6 +33,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/my", myPropertyRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/conversations", conversationsRouter);
 
 const server = http.createServer(app);
 

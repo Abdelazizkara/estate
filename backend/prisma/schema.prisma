@@ -40,6 +40,9 @@ model User {
   reviews       Int?
   createdAt     DateTime   @default(now())
   properties    Property[] @relation("AgentProperties")
+
+  conversations ConversationParticipant[]
+  messages      Message[]
 }
 
 model Property {
@@ -70,4 +73,37 @@ model Property {
   agent       User           @relation("AgentProperties", fields: [agentId], references: [id])
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+
+  conversations Conversation[]
+}
+
+
+model Conversation {
+  id           String                     @id @default(cuid())
+  propertyId   String?
+  property     Property?                  @relation(fields: [propertyId], references: [id])
+  participants ConversationParticipant[]
+  messages     Message[]
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  content        String
+  createdAt      DateTime     @default(now())
 }
