@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   Bed,
   Bath,
@@ -12,21 +12,32 @@ import {
   Mail,
   ChevronLeft,
   ChevronRight,
-} from 'lucide-react';
-import { usePropertyStore } from '../store/usePropertyStore';
-import { PropertyMap } from '../components/map';
-import { useUserStore } from '../store/useUserStore';
-import { fetchPropertyById } from '../services/properties';
-import type { Property } from '../types';
+} from "lucide-react";
+import { usePropertyStore } from "../store/usePropertyStore";
+import { PropertyMap } from "../components/map";
+import { useUserStore } from "../store/useUserStore";
+import { fetchPropertyById } from "../services/properties";
+import type { Property } from "../types";
+
+import { socket } from "../services/socket";
 
 export function PropertyDetailsPage() {
+  const navigate = useNavigate();
+  const [messageText, setMessageText] = useState("");
+  const [sending, setSending] = useState(false);
   const { id } = useParams<{ id: string }>();
-  const { properties, addProperty, toggleFavorite, addToCompare, removeFromCompare, compareList } =
-    usePropertyStore();
+  const {
+    properties,
+    addProperty,
+    toggleFavorite,
+    addToCompare,
+    removeFromCompare,
+    compareList,
+  } = usePropertyStore();
   const { user } = useUserStore();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [property, setProperty] = useState<Property | undefined>(
-    () => properties.find((p) => p.id === id)
+  const [property, setProperty] = useState<Property | undefined>(() =>
+    properties.find((p) => p.id === id),
   );
   const [loading, setLoading] = useState(!property && !!id);
   const [notFound, setNotFound] = useState(false);
@@ -95,23 +106,55 @@ export function PropertyDetailsPage() {
     );
   }
 
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageText.trim() || !property || sending) return;
+
+    setSending(true);
+    try {
+      const res = await fetch("http://localhost:3001/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          userId: property.agent.id,
+          propertyId: property.id,
+        }),
+      });
+      const data = await res.json();
+      const conversationId = data.conversation.id;
+
+      // send the first message once we have the conversation id
+      socket.emit("send-message", {
+        conversationId,
+        content: messageText.trim(),
+      });
+
+      navigate(`/dashboard/messages?c=${conversationId}`);
+    } catch (err) {
+      console.error("Failed to start conversation", err);
+    } finally {
+      setSending(false);
+    }
+  };
+
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       maximumFractionDigits: 0,
     }).format(price);
   };
 
   const nextImage = () => {
     setCurrentImageIndex((prev) =>
-      prev >= (property.images.length - 1) ? 0 : prev + 1
+      prev >= property.images.length - 1 ? 0 : prev + 1,
     );
   };
 
   const prevImage = () => {
     setCurrentImageIndex((prev) =>
-      prev <= 0 ? property.images.length - 1 : prev - 1
+      prev <= 0 ? property.images.length - 1 : prev - 1,
     );
   };
 
@@ -131,7 +174,7 @@ export function PropertyDetailsPage() {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
           <div className="relative h-96">
             <img
-              src={property.images[currentImageIndex] || '/placeholder.jpg'}
+              src={property.images[currentImageIndex] || "/placeholder.jpg"}
               alt={property.title}
               className="w-full h-full object-cover"
             />
@@ -157,7 +200,7 @@ export function PropertyDetailsPage() {
                   key={index}
                   onClick={() => setCurrentImageIndex(index)}
                   className={`w-3 h-3 rounded-full transition ${
-                    index === currentImageIndex ? 'bg-white' : 'bg-white/50'
+                    index === currentImageIndex ? "bg-white" : "bg-white/50"
                   }`}
                 />
               ))}
@@ -178,7 +221,7 @@ export function PropertyDetailsPage() {
                   <div className="flex items-center space-x-2 text-gray-600">
                     <MapPin className="h-4 w-4" />
                     <span>
-                      {property.location.address}, {property.location.city},{' '}
+                      {property.location.address}, {property.location.city},{" "}
                       {property.location.state} {property.location.zipCode}
                     </span>
                   </div>
@@ -188,11 +231,13 @@ export function PropertyDetailsPage() {
                     onClick={() => toggleFavorite(property.id)}
                     className={`p-2 rounded-lg transition ${
                       isFavorite
-                        ? 'bg-red-50 text-red-500'
-                        : 'bg-gray-100 text-gray-600 hover:bg-red-50'
+                        ? "bg-red-50 text-red-500"
+                        : "bg-gray-100 text-gray-600 hover:bg-red-50"
                     }`}
                   >
-                    <Heart className={`h-6 w-6 ${isFavorite ? 'fill-current' : ''}`} />
+                    <Heart
+                      className={`h-6 w-6 ${isFavorite ? "fill-current" : ""}`}
+                    />
                   </button>
                   <button
                     onClick={() =>
@@ -202,8 +247,8 @@ export function PropertyDetailsPage() {
                     }
                     className={`p-2 rounded-lg transition ${
                       isComparing
-                        ? 'bg-primary-50 text-primary-600'
-                        : 'bg-gray-100 text-gray-600 hover:bg-primary-50'
+                        ? "bg-primary-50 text-primary-600"
+                        : "bg-gray-100 text-gray-600 hover:bg-primary-50"
                     }`}
                   >
                     <GitCompare className="h-6 w-6" />
@@ -214,9 +259,9 @@ export function PropertyDetailsPage() {
               <div className="flex items-center space-x-4 mb-4">
                 <span
                   className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                    property.status === 'sale'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-blue-100 text-blue-700'
+                    property.status === "sale"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-blue-100 text-blue-700"
                   }`}
                 >
                   For {property.status}
@@ -228,7 +273,9 @@ export function PropertyDetailsPage() {
 
               <p className="text-3xl font-bold text-primary-600">
                 {formatPrice(property.price)}
-                {property.status === 'rent' && <span className="text-lg text-gray-500">/month</span>}
+                {property.status === "rent" && (
+                  <span className="text-lg text-gray-500">/month</span>
+                )}
               </p>
             </div>
 
@@ -313,7 +360,9 @@ export function PropertyDetailsPage() {
 
             {/* Description */}
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Description</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                Description
+              </h2>
               <p className="text-gray-700 whitespace-pre-line">
                 {property.description}
               </p>
@@ -322,10 +371,7 @@ export function PropertyDetailsPage() {
             {/* Map */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Location</h2>
-              <PropertyMap
-                properties={[property]}
-                height="300px"
-              />
+              <PropertyMap properties={[property]} height="300px" />
             </div>
           </div>
 
@@ -363,7 +409,8 @@ export function PropertyDetailsPage() {
                     <div className="flex items-center space-x-1 mt-1">
                       <span className="text-yellow-500">★</span>
                       <span className="text-sm text-gray-600">
-                        {property.agent.rating} ({property.agent.reviews} reviews)
+                        {property.agent.rating} ({property.agent.reviews}{" "}
+                        reviews)
                       </span>
                     </div>
                   )}
@@ -388,17 +435,20 @@ export function PropertyDetailsPage() {
               </div>
 
               {user ? (
-                <form className="space-y-4">
+                <form className="space-y-4" onSubmit={handleSendMessage}>
                   <textarea
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
                     placeholder="I'm interested in this property..."
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                     rows={4}
                   />
                   <button
                     type="submit"
-                    className="w-full px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition font-semibold"
+                    disabled={sending || !messageText.trim()}
+                    className="w-full px-4 py-3 bg-black text-white rounded-lg hover:bg-primary-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Send Message
+                    {sending ? "Sending..." : "Send Message"}
                   </button>
                 </form>
               ) : (
@@ -408,7 +458,7 @@ export function PropertyDetailsPage() {
                   </p>
                   <Link
                     to="/login"
-                    className="inline-block px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                    className="inline-block px-6 py-2 bg-black text-white rounded-lg hover:bg-primary-700 transition"
                   >
                     Sign In
                   </Link>

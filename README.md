@@ -15,10 +15,12 @@ A modern full-stack real estate platform built with React, TypeScript, Node.js, 
 ## Features
 
 ### Core Features (Implemented ✅)
+### Core Features (Implemented ✅)
 - **Property Search** - Advanced filtering by location, type, price, bedrooms, and area
 - **Property Listings** - Browse properties with detailed cards showing key features
 - **Property Details** - View comprehensive property information with image gallery
 - **Map Integration** - See property locations on an interactive map (Leaflet/OpenStreetMap)
+- **Favorites** - Save properties for later viewing (client-side)
 - **Favorites** - Save properties for later viewing (client-side)
 - **Property Comparison** - Compare up to 3 properties side-by-side
 - **User Authentication** - JWT-based registration/login with role-based access
@@ -44,7 +46,8 @@ A modern full-stack real estate platform built with React, TypeScript, Node.js, 
 - **React Hook Form + Zod** - Form handling and validation
 - **Leaflet + React Leaflet** - Interactive maps
 - **Lucide React** - Icons
-- **Axios** - HTTP client (for backend integration)
+- **Axios** - HTTP client
+- **Socket.IO Client** - Real-time WebSocket connections
 
 ### Backend (Fully Implemented ✅)
 - **Node.js + Express** - RESTful API server
@@ -58,7 +61,7 @@ A modern full-stack real estate platform built with React, TypeScript, Node.js, 
 
 ### Hosting (Free Options)
 - **Frontend**: Vercel, Netlify
-- **Backend**: Render, Railway
+- **Backend**: Render, Railway (WebSocket support required)
 - **Database**: Supabase, Neon
 
 ## Project Structure
@@ -66,22 +69,49 @@ A modern full-stack real estate platform built with React, TypeScript, Node.js, 
 ```
 estate/
 ├── backend/
-│   ├── prisma/          # Schema, seed, SQLite DB
-│   └── src/             # Express API
+│   ├── prisma/
+│   │   ├── schema.prisma        # Database schema with messaging models
+│   │   ├── migrations/          # Database migrations
+│   │   └── seed.ts              # Seed data
+│   └── src/
+│       ├── routes/
+│       │   ├── auth.ts          # Authentication endpoints
+│       │   ├── properties.ts    # Public property endpoints
+│       │   ├── myProperties.ts  # Protected property management
+│       │   ├── uploads.ts       # Image upload endpoints
+│       │   └── conversations.ts # Messaging REST endpoints
+│       ├── socket.ts            # WebSocket server setup
+│       ├── app.ts               # Express + Socket.IO app
+│       └── index.ts             # Server entry point
 └── frontend/
     └── src/
         ├── components/
-        │   ├── common/       # Reusable UI components
-        │   ├── layout/       # Header, Footer, Layout
-        │   ├── map/          # Map components
-        │   └── property/     # Property-related components
-        ├── data/             # Sample/mock data
-        ├── hooks/            # Custom React hooks
-        ├── pages/            # Page components
-        ├── services/         # API services
-        ├── store/            # Zustand stores
-        ├── types/            # TypeScript types
-        └── utils/            # Helper functions
+        │   ├── layout/          # Header, Footer, Layout
+        │   ├── map/             # Map components
+        │   └── property/        # Property-related components
+        ├── pages/
+        │   ├── HomePage.tsx
+        │   ├── PropertiesPage.tsx
+        │   ├── PropertyDetailsPage.tsx
+        │   ├── AgentsPage.tsx
+        │   ├── FavoritesPage.tsx
+        │   ├── ComparePage.tsx
+        │   ├── LoginPage.tsx
+        │   ├── RegisterPage.tsx
+        │   ├── DashboardPage.tsx
+        │   ├── DashboardPropertiesPage.tsx
+        │   ├── AddPropertyPage.tsx
+        │   ├── EditPropertyPage.tsx
+        │   └── TestMessage.tsx  # Real-time messaging UI
+        ├── services/
+        │   ├── api.ts           # API client
+        │   ├── auth.ts          # Auth service
+        │   ├── properties.ts    # Property service
+        │   ├── uploads.ts       # Upload service
+        │   └── socket.ts        # Socket.IO client
+        ├── store/               # Zustand stores
+        ├── types/               # TypeScript types
+        └── utils/               # Helper functions
 ```
 
 ## Getting Started
@@ -97,7 +127,7 @@ estate/
 ```bash
 cd backend
 npm install
-copy .env.example .env
+copy .env.example .env  # Create and configure your .env file
 npm run db:push
 npm run db:seed
 npm run dev
@@ -111,7 +141,6 @@ API runs at `http://localhost:3001`. Seed agents use password `password123` (e.g
 cd frontend
 npm install
 npm run dev
-# or if npm scripts fail: node .\node_modules\vite\bin\vite.js
 ```
 
 The app will be available at `http://localhost:5173` (proxies `/api` to the backend).
@@ -139,6 +168,17 @@ Ensure `npm install` completed in `backend/` first — without `node_modules`, P
 
 ### Available Scripts
 
+**Backend:**
+```bash
+npm run dev         # Start development server with hot reload
+npm run build       # Compile TypeScript to JavaScript
+npm run start       # Run compiled production build
+npm run db:generate # Generate Prisma client
+npm run db:push     # Push schema changes to database
+npm run db:seed     # Seed database with sample data
+```
+
+**Frontend:**
 ```bash
 npm run dev      # Start development server
 npm run build    # Build for production
@@ -174,8 +214,20 @@ npm run lint     # Run ESLint
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/auth/register` | Create account (buyer/seller/agent/admin) |
+
+### Authentication
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/auth/register` | Create account (buyer/seller/agent/admin) |
 | POST | `/api/auth/login` | Sign in → httpOnly session cookie |
 | POST | `/api/auth/logout` | Clear session cookie |
+| GET | `/api/auth/me` | Get current user (requires auth) |
+
+### Public Properties
+| Method | Path | Query Params | Description |
+|--------|------|--------------|-------------|
+| GET | `/api/properties` | `query`, `type`, `status`, `city`, `minPrice`, `maxPrice`, `minBedrooms`, `minArea` | Search/filter properties |
+| GET | `/api/properties/:id` | - | Get property details |
 | GET | `/api/auth/me` | Get current user (requires auth) |
 
 ### Public Properties
